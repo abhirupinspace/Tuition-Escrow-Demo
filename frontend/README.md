@@ -1,180 +1,393 @@
-# EduPay Global - Cross-Border Education Payments
+# TuitionEscrow dApp
 
-A modern, secure cross-border payment system for education using stablecoins. This frontend application provides an intuitive interface for students to pay tuition fees and make donations to universities worldwide, with admin controls for payment management.
+A secure cross-border payment system built on Ethereum that enables stablecoin-based tuition fee transfers between students and universities through an escrow mechanism with administrative oversight.
 
-## 🚀 Features
+## Overview
 
-### For Students/Users
-- **Wallet Integration**: Connect with MetaMask or other Web3 wallets
-- **University Selection**: Choose from a curated list of global universities
-- **Secure Payments**: Make payments using USDC stablecoin with escrow protection
-- **Payment Tracking**: View complete payment history and status
-- **Real-time Updates**: Get instant feedback on payment status
+This decentralized application facilitates international education payments by holding student funds in escrow until authorized release by administrators. The system eliminates traditional banking intermediaries while providing security guarantees through smart contract automation and admin controls.
 
-### For Administrators
-- **Payment Review**: Review and approve pending payments
-- **Admin Dashboard**: Comprehensive overview of payment statistics
-- **Release/Refund**: Approve payments to universities or refund to users
-- **Audit Trail**: Complete transaction history with blockchain verification
+### Key Features
 
-### Technical Features
-- **Responsive Design**: Works seamlessly on desktop and mobile
-- **Modern UI**: Built with shadcn/ui components and Tailwind CSS
-- **Type Safety**: Full TypeScript implementation
-- **Web3 Integration**: Ready for smart contract integration
-- **Security First**: Escrow-based payment system
+- **Secure Escrow System**: Funds are held safely in smart contracts until release authorization
+- **Administrative Controls**: Designated administrators can release payments to universities or refund students
+- **Stablecoin Integration**: Uses USDC or compatible ERC20 tokens to minimize volatility
+- **Multi-Payment Support**: Handles multiple concurrent payments with unique tracking
+- **Complete Audit Trail**: All transactions are recorded on-chain with detailed event logging
+- **Emergency Controls**: Pause functionality and emergency withdrawal capabilities
 
-## 🛠️ Tech Stack
+## Architecture
 
-- **Frontend**: Next.js 14, React 18, TypeScript
-- **Styling**: Tailwind CSS, shadcn/ui components
-- **Web3**: MetaMask integration (ready for Web3 libraries)
-- **State Management**: React hooks and context
-- **UI Components**: Radix UI primitives via shadcn/ui
+### Smart Contracts
 
-## 📦 Installation
+**TuitionEscrow.sol** - Main escrow contract implementing:
+- Payment initialization and tracking
+- Secure fund deposit mechanism
+- Administrative release and refund functions
+- Emergency pause and recovery functions
+- Comprehensive event emission for transparency
+
+**MockUSDC.sol** - ERC20 test token for development and testing purposes
+
+### Technology Stack
+
+#### Backend
+- **Solidity** ^0.8.19 - Smart contract development
+- **Hardhat** - Development framework and testing environment
+- **OpenZeppelin** - Security-audited contract libraries
+- **TypeScript** - Type-safe development
+- **ethers.js** v6 - Ethereum interaction library
+
+#### Frontend
+- **Next.js** 15+ - React framework for production applications
+- **TypeScript** - Type safety and developer experience
+- **Tailwind CSS** - Utility-first styling framework
+- **wagmi** + **viem** - Type-safe Ethereum integration
+- **WalletConnect** - Multi-wallet connection support
+
+## Contract Deployment
+
+### Sepolia Testnet
+
+- **TuitionEscrow**: `0x[CONTRACT_ADDRESS]` (deployed)
+- **Test Token (mUSDC)**: `0x466e34e422e7775e7EbB606c9F4cE870e9A2817e`
+- **Network**: Sepolia Testnet (Chain ID: 11155111)
+- **Block Explorer**: [View on Etherscan](https://sepolia.etherscan.io/address/CONTRACT_ADDRESS)
+
+## Installation and Setup
+
+### Prerequisites
+
+- Node.js >= 18.0.0
+- npm >= 8.0.0
+- Git
+- MetaMask or compatible Web3 wallet
+
+### Local Development Setup
 
 1. **Clone the repository**
-   \`\`\`bash
-   git clone https://github.com/yourusername/edupay-global.git
-   cd edupay-global
-   \`\`\`
+   ```bash
+   git clone https://github.com/yourusername/tuition-escrow-dapp.git
+   cd tuition-escrow-dapp
+   ```
 
 2. **Install dependencies**
-   \`\`\`bash
+   ```bash
    npm install
-   # or
-   yarn install
-   # or
-   pnpm install
-   \`\`\`
+   ```
 
-3. **Run the development server**
-   \`\`\`bash
-   npm run dev
-   # or
-   yarn dev
-   # or
-   pnpm dev
-   \`\`\`
+3. **Environment configuration**
+   ```bash
+   cp .env.example .env
+   ```
+   
+   Configure your `.env` file:
+   ```env
+   PRIVATE_KEY=your_wallet_private_key
+   SEPOLIA_URL=https://sepolia.infura.io/v3/YOUR_INFURA_KEY
+   ETHERSCAN_API_KEY=your_etherscan_api_key
+   MUSDC_ADDRESS=0x466e34e422e7775e7EbB606c9F4cE870e9A2817e
+   ```
 
-4. **Open your browser**
-   Navigate to [http://localhost:3000](http://localhost:3000)
+4. **Compile smart contracts**
+   ```bash
+   npm run compile
+   ```
 
-## 🔧 Configuration
+5. **Run test suite**
+   ```bash
+   npm test
+   ```
 
-### Environment Variables
-Create a \`.env.local\` file in the root directory:
+## Smart Contract API
 
-\`\`\`env
-# Smart Contract Configuration
-NEXT_PUBLIC_CONTRACT_ADDRESS=0x...
-NEXT_PUBLIC_USDC_CONTRACT_ADDRESS=0x...
-NEXT_PUBLIC_NETWORK_ID=11155111
+### Core Functions
 
-# Admin Configuration
-NEXT_PUBLIC_ADMIN_ADDRESS=0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b1
+#### `initialize(address payer, address university, uint256 amount, string calldata invoiceRef) → uint256`
+Creates a new payment escrow with specified parameters.
 
-# API Configuration (if needed)
-NEXT_PUBLIC_API_URL=https://api.edupay.global
-\`\`\`
+**Parameters:**
+- `payer`: Address of the student making the payment
+- `university`: Address of the receiving institution
+- `amount`: Payment amount in stablecoin base units
+- `invoiceRef`: Unique reference identifier for the payment
 
-### Smart Contract Integration
-To integrate with your smart contract:
+**Returns:** Unique payment ID for tracking
 
-1. Update the contract addresses in your environment variables
-2. Add the contract ABI to \`lib/contracts/\`
-3. Implement Web3 provider in \`lib/web3.ts\`
-4. Update the payment functions in components to call actual contract methods
+**Events:** `PaymentInitialized(uint256 indexed paymentId, address indexed payer, address indexed university, uint256 amount, string invoiceRef)`
 
-## 🏗️ Project Structure
+#### `deposit(uint256 paymentId)`
+Transfers approved stablecoin amount from payer to escrow contract.
 
-\`\`\`
-├── app/
-│   ├── components/          # React components
-│   │   ├── wallet-connection.tsx
-│   │   ├── payment-form.tsx
-│   │   ├── admin-dashboard.tsx
-│   │   └── payment-history.tsx
-│   ├── globals.css         # Global styles
-│   ├── layout.tsx          # Root layout
-│   └── page.tsx           # Home page
-├── components/ui/          # shadcn/ui components
-├── lib/                   # Utility functions
-├── types/                 # TypeScript type definitions
-└── public/               # Static assets
-\`\`\`
+**Parameters:**
+- `paymentId`: Unique identifier of the payment to fund
 
-## 🎯 Usage
+**Requirements:**
+- Caller must be the designated payer
+- Payment must be in INITIALIZED state
+- Sufficient token balance and allowance required
 
-### For Students
+**Events:** `Deposited(uint256 indexed paymentId, address indexed payer, uint256 amount)`
 
-1. **Connect Wallet**: Click "Connect Wallet" and approve MetaMask connection
-2. **Select University**: Choose your target university from the dropdown
-3. **Enter Details**: Input payment amount and invoice reference
-4. **Submit Payment**: Review details and submit the payment
-5. **Track Status**: Monitor payment status in the "Payment History" tab
+#### `release(uint256 paymentId)` [Owner Only]
+Releases escrowed funds to the designated university.
 
-### For Administrators
+**Parameters:**
+- `paymentId`: Unique identifier of the payment to release
 
-1. **Connect Admin Wallet**: Connect with the designated admin wallet address
-2. **Access Admin Dashboard**: Navigate to the "Admin Dashboard" tab
-3. **Review Payments**: View all pending payments requiring approval
-4. **Take Action**: Release payments to universities or refund to users
-5. **Monitor Statistics**: Track overall system performance and metrics
+**Requirements:**
+- Only contract owner can execute
+- Payment must be in DEPOSITED state
 
-## 🔐 Security Features
+**Events:** `Released(uint256 indexed paymentId, address indexed university, uint256 amount)`
 
-- **Escrow Protection**: All payments are held in smart contract escrow
-- **Admin Controls**: Multi-signature admin approval for payment release
-- **Audit Trail**: Complete blockchain-based transaction history
-- **Wallet Security**: Non-custodial wallet integration
-- **Input Validation**: Comprehensive form validation and sanitization
+#### `refund(uint256 paymentId)` [Owner Only]
+Returns escrowed funds to the original payer.
 
-## 🌐 Supported Networks
+**Parameters:**
+- `paymentId`: Unique identifier of the payment to refund
 
-- **Sepolia Testnet** (Primary)
-- **Ethereum Mainnet** (Production ready)
-- **Polygon** (Lower fees)
-- **Arbitrum** (L2 scaling)
+**Requirements:**
+- Only contract owner can execute
+- Payment must be in DEPOSITED state
 
-## 📱 Browser Support
+**Events:** `Refunded(uint256 indexed paymentId, address indexed payer, uint256 amount)`
 
-- Chrome/Chromium (Recommended)
-- Firefox
-- Safari
-- Edge
-- Mobile browsers with Web3 wallet support
+### View Functions
 
-## 🤝 Contributing
+#### `getPayment(uint256 paymentId) → Payment`
+Retrieves complete payment information including status and timestamps.
+
+#### `getPayerPayments(address payer) → uint256[]`
+Returns array of payment IDs associated with a specific payer address.
+
+#### `getUniversityPayments(address university) → uint256[]`
+Returns array of payment IDs associated with a specific university address.
+
+#### `getCurrentPaymentId() → uint256`
+Returns the next available payment ID (total count of payments created).
+
+#### `getContractBalance() → uint256`
+Returns current stablecoin balance held in escrow.
+
+### Payment States
+
+- **INITIALIZED** (0): Payment created but funds not yet deposited
+- **DEPOSITED** (1): Funds held in escrow awaiting administrator action
+- **RELEASED** (2): Funds released to university (final state)
+- **REFUNDED** (3): Funds returned to payer (final state)
+
+## Testing
+
+### Comprehensive Test Suite
+
+The project includes extensive testing covering all contract functionality:
+
+```bash
+# Run all tests
+npm test
+
+# Run specific test categories
+npm run test:escrow        # Core escrow functionality
+npm run test:integration   # End-to-end workflows
+
+# Generate coverage report
+npm run test:coverage
+
+# Run tests with gas reporting
+REPORT_GAS=true npm test
+```
+
+### Test Categories
+
+- **Contract Deployment**: Validates proper initialization
+- **Payment Management**: Tests creation and tracking of payments
+- **Deposit Functionality**: Verifies secure fund transfer mechanisms
+- **Administrative Controls**: Tests owner-only release and refund functions
+- **Security Validations**: Ensures proper access controls and input validation
+- **Emergency Functions**: Tests pause and emergency withdrawal capabilities
+- **Multi-Payment Scenarios**: Validates concurrent payment handling
+
+## Deployment
+
+### Deploy to Sepolia Testnet
+
+1. **Ensure testnet ETH balance**
+   - Obtain Sepolia ETH from [Sepolia Faucet](https://sepoliafaucet.com/)
+
+2. **Deploy using Hardhat Ignition**
+   ```bash
+   npm run ignition:sepolia
+   ```
+
+3. **Alternative deployment method**
+   ```bash
+   npm run deploy:simple
+   ```
+
+4. **Verify deployment**
+   ```bash
+   npm run verify:deployment -- --network sepolia
+   ```
+
+5. **Verify on Etherscan**
+   ```bash
+   npx hardhat verify --network sepolia TUITION_ESCROW_ADDRESS 0x466e34e422e7775e7EbB606c9F4cE870e9A2817e YOUR_WALLET_ADDRESS
+   ```
+
+### Deploy to Other Networks
+
+The contract system supports deployment to various networks:
+
+```bash
+# Local development
+npm run node                    # Start local blockchain
+npm run ignition:localhost      # Deploy to local network
+
+# Mainnet (production)
+npm run ignition:mainnet        # Uses real USDC
+```
+
+## Usage Examples
+
+### Initialize Payment
+
+```typescript
+const paymentId = await tuitionEscrow.initialize(
+  "0x1234...5678",              // Student address
+  "0xabcd...ef00",              // University address
+  ethers.parseUnits("5000", 6), // 5000 USDC
+  "INV-2024-001"                // Invoice reference
+);
+```
+
+### Student Deposit
+
+```typescript
+// Approve token spending
+await usdcToken.approve(escrowAddress, amount);
+
+// Deposit funds to escrow
+await tuitionEscrow.connect(student).deposit(paymentId);
+```
+
+### Administrative Actions
+
+```typescript
+// Release payment to university
+await tuitionEscrow.connect(admin).release(paymentId);
+
+// Or refund to student
+await tuitionEscrow.connect(admin).refund(paymentId);
+```
+
+## Security Considerations
+
+### Implemented Security Measures
+
+- **Reentrancy Protection**: Uses OpenZeppelin's ReentrancyGuard
+- **Access Control**: Owner-based permissions for critical functions
+- **Input Validation**: Comprehensive parameter checking and custom errors
+- **Safe Token Transfers**: Utilizes SafeERC20 for secure token operations
+- **State Machine Logic**: Enforces proper payment state transitions
+- **Emergency Controls**: Pause functionality and emergency withdrawal capabilities
+
+### Security Assumptions
+
+- **Admin Key Management**: Contract owner holds significant control and should use multi-signature wallets in production
+- **Token Compatibility**: Assumes standard ERC20 token behavior
+- **Network Security**: Relies on Ethereum network consensus for transaction finality
+- **External Dependencies**: Trusts OpenZeppelin library implementations
+
+### Recommended Security Practices
+
+- Deploy through multi-signature wallet for production use
+- Conduct professional security audit before mainnet deployment
+- Implement time-locks for critical administrative functions
+- Monitor contract events for suspicious activity
+- Maintain emergency response procedures
+
+## Gas Optimization
+
+The contract implements several gas optimization techniques:
+
+- **Custom Errors**: Reduces gas costs compared to string revert messages
+- **Efficient Storage**: Optimized struct packing and storage patterns
+- **Minimal External Calls**: Reduces gas consumption through batched operations
+- **Event-Driven Architecture**: Provides detailed logging without excessive storage costs
+
+## Frontend Integration
+
+### Contract ABIs and Type Definitions
+
+After compilation, contract ABIs and TypeScript definitions are available in:
+- `artifacts/contracts/` - Compiled contract artifacts
+- `typechain-types/` - Generated TypeScript type definitions
+
+### Key Integration Points
+
+```typescript
+import { TuitionEscrow__factory } from './typechain-types';
+
+// Connect to deployed contract
+const contract = TuitionEscrow__factory.connect(contractAddress, signer);
+
+// Initialize payment
+const tx = await contract.initialize(payer, university, amount, invoiceRef);
+```
+
+## Contributing
+
+### Development Workflow
 
 1. Fork the repository
-2. Create a feature branch (\`git checkout -b feature/amazing-feature\`)
-3. Commit your changes (\`git commit -m 'Add amazing feature'\`)
-4. Push to the branch (\`git push origin feature/amazing-feature\`)
-5. Open a Pull Request
+2. Create a feature branch: `git checkout -b feature/enhancement-name`
+3. Make changes with appropriate tests
+4. Ensure all tests pass: `npm test`
+5. Commit changes: `git commit -m 'Add enhancement'`
+6. Push to branch: `git push origin feature/enhancement-name`
+7. Submit pull request
 
-## 📄 License
+### Code Quality Standards
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+- Comprehensive test coverage for new functionality
+- Proper NatSpec documentation for all public functions
+- Gas optimization considerations
+- Security best practices compliance
 
-## 🆘 Support
+## Project Structure
 
-For support and questions:
-- Create an issue on GitHub
-- Contact: support@edupay.global
-- Documentation: [docs.edupay.global](https://docs.edupay.global)
+```
+tuition-escrow-dapp/
+├── contracts/                 # Smart contract source code
+│   ├── TuitionEscrow.sol     # Main escrow contract
+│   └── MockUSDC.sol          # Test token contract
+├── test/                     # Comprehensive test suite
+│   ├── TuitionEscrow.test.ts # Core functionality tests
+│   └── Integration.test.ts   # End-to-end testing
+├── scripts/                  # Deployment and utility scripts
+├── ignition/modules/         # Hardhat Ignition deployment modules
+├── deployments/              # Deployment artifacts and addresses
+├── typechain-types/          # Generated TypeScript definitions
+└── artifacts/                # Compiled contract artifacts
+```
 
-## 🗺️ Roadmap
+## License
 
-- [ ] Multi-language support
-- [ ] Mobile app development
-- [ ] Integration with more universities
-- [ ] Support for additional stablecoins
-- [ ] Advanced analytics dashboard
-- [ ] Automated compliance reporting
+This project is licensed under the MIT License. See [LICENSE](LICENSE) file for details.
+
+## Audit Status
+
+**Status**: Not audited - This is a development/educational project
+
+For production deployments, a comprehensive security audit is strongly recommended before handling real funds.
+
+## Support
+
+For technical questions or issues:
+- Create an issue in the GitHub repository
+- Review existing documentation and test cases
+- Check deployment guides for common troubleshooting steps
 
 ---
 
-Built with ❤️ for global education accessibility
-\`\`\`
+**Disclaimer**: This software is provided for educational and development purposes. Conduct thorough testing and security audits before any production deployment involving real funds.
