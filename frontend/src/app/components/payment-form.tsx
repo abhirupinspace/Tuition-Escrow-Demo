@@ -1,6 +1,6 @@
 "use client"
 
-import type React from "react"
+import React from "react"
 import { useState, useEffect } from "react"
 import { useAccount, useChainId } from "wagmi"
 import { toast } from "sonner"
@@ -75,23 +75,29 @@ const universities = [
 ]
 
 export function PaymentForm({ userAddress }: PaymentFormProps) {
-  const { address, isConnected } = useAccount() // Add isConnected
+  const { address, isConnected } = useAccount()
   const chainId = useChainId()
   const [selectedUniversity, setSelectedUniversity] = useState("")
   const [amount, setAmount] = useState("")
   const [invoiceRef, setInvoiceRef] = useState("")
   const [description, setDescription] = useState("")
   const [currentPaymentId, setCurrentPaymentId] = useState<number | null>(null)
-  const [usdcBalance, setUsdcBalance] = useState<string>("0") // Declare setUsdcBalance here
-
-  // Wagmi hooks
-  const { data: usdcBalanceData } = useUSDCBalance(address)
+  const { data: usdcBalanceData, refetch: refetchUSDCBalance } = useUSDCBalance(address)
   const { data: allowance } = useUSDCAllowance(address, CONTRACT_ADDRESSES.TUITION_ESCROW as any)
   const { approve, isPending: isApproving, isConfirmed: isApproved } = useApproveUSDC()
   const { initialize, isPending: isInitializing, isConfirmed: isInitialized, hash: initHash } = useInitializePayment()
   const { deposit, isPending: isDepositing, isConfirmed: isDeposited, hash: depositHash } = useDepositPayment()
 
+  // Format USDC balance once
   const usdcBalanceFormatted = usdcBalanceData ? formatUSDCAmount(usdcBalanceData) : "0"
+
+  // Update balance check logic
+  const hasInsufficientBalance = React.useMemo(() => {
+    if (!amount || !usdcBalanceData) return false
+    const amountWei = parseUSDCAmount(amount)
+    return amountWei > usdcBalanceData
+  }, [amount, usdcBalanceData])
+
   const isProcessing = isApproving || isInitializing || isDepositing
   const [isComponentLoading, setIsComponentLoading] = useState(true)
   const [ethBalance, setEthBalance] = useState<string>("0")
@@ -113,20 +119,13 @@ export function PaymentForm({ userAddress }: PaymentFormProps) {
   }, [])
 
   useEffect(() => {
-    if (!isConnected) {
-      setNetwork("disconnected")
-      return
+    if (address) {
+      checkNetwork()
     }
-    checkNetwork()
-  }, [isConnected, chainId])
+  }, [address])
 
   const checkNetwork = async () => {
     try {
-      if (!isConnected) {
-        setNetwork("disconnected")
-        return
-      }
-
       if (chainId !== sepolia.id) {
         setNetwork("wrong")
         toast.error("Incorrect Network", {
@@ -142,22 +141,19 @@ export function PaymentForm({ userAddress }: PaymentFormProps) {
   }
 
   const fetchBalances = async () => {
-    if (!isConnected || !userAddress) {
-      setUsdcBalance("0")
+    if (!isConnected || !address) {
       setEthBalance("0")
       return
     }
 
     try {
-      const [usdcBal, ethBal] = await Promise.all([
-        web3Service.getUSDCBalance(userAddress),
-        web3Service.getETHBalance(userAddress),
-      ])
-      setUsdcBalance(usdcBal)
+      // Only fetch ETH balance from web3Service
+      const ethBal = await web3Service.getETHBalance(address)
       setEthBalance(ethBal)
+      // Refetch USDC balance using wagmi
+      await refetchUSDCBalance()
     } catch (error) {
       console.error("Error fetching balances:", error)
-      setUsdcBalance("0")
       setEthBalance("0")
     }
   }
@@ -187,9 +183,10 @@ export function PaymentForm({ userAddress }: PaymentFormProps) {
     const amountNum = Number.parseFloat(amount)
     const balanceNum = Number.parseFloat(usdcBalanceFormatted)
 
-    if (amountNum > balanceNum) {
+    if (hasInsufficientBalance) {
+      const balanceFormatted = formatUSDCAmount(usdcBalanceData || BigInt(0))
       toast.error("Insufficient Balance", {
-        description: `You need ${amountNum.toFixed(2)} USDC but only have ${balanceNum.toFixed(2)} USDC`,
+        description: `You need ${amount} USDC but only have ${balanceFormatted} USDC`,
       })
       return false
     }
@@ -200,13 +197,6 @@ export function PaymentForm({ userAddress }: PaymentFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!isConnected) {
-      toast.error("Wallet Not Connected", {
-        description: "Please connect your wallet to continue",
-      })
-      return
-    }
-
     if (!validateForm()) return
 
     try {
@@ -216,7 +206,7 @@ export function PaymentForm({ userAddress }: PaymentFormProps) {
       }
 
       const amountWei = parseUSDCAmount(amount)
-      const currentAllowance = allowance || 0n
+      const currentAllowance = allowance || BigInt(0)
 
       // Step 1: Approve USDC if needed
       if (currentAllowance < amountWei) {
@@ -296,10 +286,7 @@ export function PaymentForm({ userAddress }: PaymentFormProps) {
   }, [selectedUniversity, amount])
 
   const estimateGas = async () => {
-    if (!selectedUniversity || !amount || !isConnected) {
-      setGasEstimate(null)
-      return
-    }
+    if (!selectedUniversity || !amount) return
 
     setIsEstimatingGas(true)
     try {
@@ -318,8 +305,7 @@ export function PaymentForm({ userAddress }: PaymentFormProps) {
 
   const selectedUni = universities.find((u) => u.id === selectedUniversity)
   const amountNum = Number.parseFloat(amount) || 0
-  const balanceNum = Number.parseFloat(usdcBalance)
-  const hasInsufficientBalance = amountNum > balanceNum
+  const balanceNum = Number.parseFloat(usdcBalanceFormatted)
   const estimatedGasFee = 2.5 // Estimated gas fee in USD
 
   if (isComponentLoading) {
@@ -414,9 +400,11 @@ export function PaymentForm({ userAddress }: PaymentFormProps) {
                 <div className="flex items-center justify-between text-sm">
                   <div className="space-y-1">
                     <div className="text-neutral-400">
-                      Available: {Number.parseFloat(usdcBalanceFormatted).toFixed(2)} USDC
+                      Available: {formatUSDCAmount(usdcBalanceData || BigInt(0))} USDC
                     </div>
-                    <div className="text-neutral-400">ETH Balance: {Number.parseFloat(ethBalance).toFixed(4)} ETH</div>
+                    <div className="text-neutral-400">
+                      ETH Balance: {Number.parseFloat(ethBalance).toFixed(4)} ETH
+                    </div>
                   </div>
                   {hasInsufficientBalance && (
                     <span className="text-red-400 flex items-center gap-1">
@@ -464,15 +452,10 @@ export function PaymentForm({ userAddress }: PaymentFormProps) {
               <Button
                 type="submit"
                 className="w-full h-12 font-medium bg-white text-black hover:bg-neutral-100 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={isProcessing || hasInsufficientBalance || network !== "sepolia" || !isConnected}
+                disabled={isProcessing || hasInsufficientBalance || network !== "sepolia"}
                 data-slot="button"
               >
-                {!isConnected ? (
-                  <div className="flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4" />
-                    Connect Wallet
-                  </div>
-                ) : isProcessing ? (
+                {isProcessing ? (
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 border-2 border-neutral-400 border-t-black rounded-full animate-spin"></div>
                     Processing Payment...
