@@ -757,12 +757,12 @@ export enum PaymentStatus {
 
 // Types (updated to match new contract structure)
 export interface Payment {
-  id: any
-  invoiceReference: ReactNode
+  id: number
   payer: string
   university: string
   amount: bigint
   invoiceRef: string
+  invoiceReference: string // For UI display
   status: PaymentStatus
   createdAt: bigint
   depositedAt: bigint
@@ -998,6 +998,7 @@ export class Web3Service {
             university: payment.university,
             amount: payment.amount,
             invoiceRef: payment.invoiceRef,
+            invoiceReference: payment.invoiceRef, // Map invoiceRef to invoiceReference
             status: payment.status,
             createdAt: payment.createdAt,
             depositedAt: payment.depositedAt,

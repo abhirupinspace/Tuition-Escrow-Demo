@@ -29,15 +29,13 @@ export function WalletConnection({ onConnect, onDisconnect, isConnected, userAdd
   const { data: ethBalance, isLoading: isLoadingEthBalance } = useBalance({
     address: account.address,
     chainId: 11155111, // Sepolia chain ID
-    watch: true // Optional: to keep balance updated in real-time
   })
 
   // Get USDC balance
   const { data: usdcBalanceData, isLoading: isLoadingUsdcBalance } = useBalance({
     address: account.address,
     token: process.env.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS as `0x${string}`,
-    chainId: sepolia.id,
-    watch: true // Optional: to keep balance updated in real-time
+    chainId: sepolia.id
   })
 
   useEffect(() => {
