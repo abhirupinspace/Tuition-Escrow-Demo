@@ -1,4 +1,5 @@
 import { ethers } from "ethers"
+import { ReactNode } from "react"
 
 // Updated TuitionEscrow contract ABI from the provided snippet
 export const TUITION_ESCROW_ABI = [
@@ -732,9 +733,9 @@ export const USDC_ABI = [
 
 // Contract addresses (Sepolia testnet)
 export const CONTRACT_ADDRESSES = {
-  TUITION_ESCROW: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || "0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b1",
-  USDC: process.env.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS || "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", // Sepolia USDC
-  ADMIN: process.env.NEXT_PUBLIC_ADMIN_ADDRESS || "0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b1",
+  TUITION_ESCROW: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || "0xd81AE6A442B19E8D1c742FB75bD248eBcC4f3D06",
+  USDC: process.env.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS || "0x466e34e422e7775e7EbB606c9F4cE870e9A2817e", // Sepolia USDC
+  ADMIN: process.env.NEXT_PUBLIC_ADMIN_ADDRESS || "0xC8df9cB27dD2736424333176323C1Bcef22E521A",
 }
 
 // Network configuration
@@ -756,8 +757,8 @@ export enum PaymentStatus {
 
 // Types (updated to match new contract structure)
 export interface Payment {
-  invoiceReference: any
   id: any
+  invoiceReference: ReactNode
   payer: string
   university: string
   amount: bigint
@@ -780,6 +781,9 @@ export type WalletType = "metamask" | "walletconnect" | "coinbase"
 
 // Web3 utilities
 export class Web3Service {
+  getProvider() {
+    throw new Error("Method not implemented.")
+  }
   private static instance: Web3Service
   public state: Web3State = {
     provider: null,
@@ -853,7 +857,7 @@ export class Web3Service {
       }
 
       if (!this.state.account) {
-        throw new Error("Failed to connect wallet: no account found")
+        throw new Error("Failed to connect wallet")
       }
 
       return this.state.account
@@ -938,7 +942,7 @@ export class Web3Service {
       // Check USDC balance
       const balance = await usdcContract.balanceOf(this.state.account)
       if (balance < amountWei) {
-        throw new Error("Insufficient USDC balance")
+        throw new Error("Insufficient mUSDC balance")
       }
 
       // Step 1: Initialize payment
@@ -994,7 +998,6 @@ export class Web3Service {
             university: payment.university,
             amount: payment.amount,
             invoiceRef: payment.invoiceRef,
-            invoiceReference: payment.invoiceRef, // Add this line to satisfy the Payment interface
             status: payment.status,
             createdAt: payment.createdAt,
             depositedAt: payment.depositedAt,
@@ -1024,7 +1027,6 @@ export class Web3Service {
             university: payment.university,
             amount: payment.amount,
             invoiceRef: payment.invoiceRef,
-            invoiceReference: payment.invoiceRef,
             status: payment.status,
             createdAt: payment.createdAt,
             depositedAt: payment.depositedAt,

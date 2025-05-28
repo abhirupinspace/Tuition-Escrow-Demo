@@ -5,36 +5,40 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { FloatingElements } from "@/components/floating-elements"
-import { ArrowRight, Globe, GraduationCap, Lock, Shield, Zap } from "lucide-react"
-import { WalletConnection } from "@/components/wallet-connection"
-import { PaymentForm } from "@/components/payment-form"
-import { PaymentHistory } from "@/components/payment-history"
-import { AdminDashboard } from "@/components/admin-dashboard"
-import { TransactionTracker } from "@/components/transaction-tracker"
-
+import { WalletConnection } from "./components/wallet-connection"
+import { PaymentForm } from "./components/payment-form"
+import { AdminDashboard } from "./components/admin-dashboard"
+import { PaymentHistory } from "./components/payment-history"
+import { FloatingElements } from "./components/floating-elements"
+import { GraduationCap, Shield, Globe, ArrowRight, Zap, Lock } from "lucide-react"
+import { TransactionTracker } from "./components/transaction-tracker"
+import { useAccount } from "wagmi"
+import { DebugPanel } from "./components/debug-panel"
 
 export default function HomePage() {
-  const adminAddress = "0xC8df9cB27dD2736424333176323C1Bcef22E521A"; 
-  const [isConnected, setIsConnected] = useState(false)
-  const [userAddress, setUserAddress] = useState<string>("")
-  const [isAdmin, setIsAdmin] = useState(false)
+  const { address, isConnected } = useAccount()
   const [mounted, setMounted] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  // Mock admin address
+  const adminAddress = process.env.NEXT_PUBLIC_ADMIN_ADDRESS || "0xC8df9cB27dD2736424333176323C1Bcef22E521A"
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
+  useEffect(() => {
+    if (address) {
+      setIsAdmin(address.toLowerCase() === adminAddress.toLowerCase())
+    }
+  }, [address, adminAddress])
+
   const handleWalletConnect = (address: string) => {
-    setIsConnected(true)
-    setUserAddress(address)
-    setIsAdmin(address.toLowerCase() === adminAddress.toLowerCase())
+    // This is now handled by Wagmi automatically
   }
 
   const handleWalletDisconnect = () => {
-    setIsConnected(false)
-    setUserAddress("")
-    setIsAdmin(false)
+    // This is now handled by Wagmi automatically
   }
 
   if (!mounted) {
@@ -63,7 +67,7 @@ export default function HomePage() {
             onConnect={handleWalletConnect}
             onDisconnect={handleWalletDisconnect}
             isConnected={isConnected}
-            userAddress={userAddress}
+            userAddress={address || ""}
           />
         </div>
       </header>
@@ -178,7 +182,7 @@ export default function HomePage() {
                   <h2 className="text-2xl font-light text-white mb-2">Dashboard</h2>
                   <p className="text-neutral-400 flex items-center gap-2 font-light">
                     <span className="w-1.5 h-1.5 bg-green-400 rounded-full"></span>
-                    {userAddress.slice(0, 6)}...{userAddress.slice(-4)}
+                    {address?.slice(0, 6)}...{address?.slice(-4)}
                   </p>
                 </div>
                 {isAdmin && (
@@ -193,7 +197,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            <Tabs defaultValue={isAdmin ? "admin" : "payment"} className="w-full" data-slot="tabs">
+            <Tabs defaultValue={isAdmin ? "admin" : "payment"} className="w-full " data-slot="tabs">
               <TabsList
                 className="grid w-full grid-cols-3 bg-neutral-950/50 border border-neutral-800/50 backdrop-blur-sm p-1 rounded-xl"
                 data-slot="list"
@@ -224,11 +228,11 @@ export default function HomePage() {
               </TabsList>
 
               <TabsContent value="payment" className="mt-8" data-slot="content">
-                <PaymentForm userAddress={userAddress} />
+                <PaymentForm userAddress={address || ""} />
               </TabsContent>
 
               <TabsContent value="history" className="mt-8" data-slot="content">
-                <PaymentHistory userAddress={userAddress} />
+                  <PaymentHistory userAddress={address || ""} />
               </TabsContent>
 
               {isAdmin && (
@@ -239,8 +243,9 @@ export default function HomePage() {
             </Tabs>
 
             <div className="mt-8">
-              <TransactionTracker userAddress={userAddress} />
+              <TransactionTracker userAddress={address || ""} />
             </div>
+            {isConnected && <DebugPanel />}
           </div>
         )}
       </main>

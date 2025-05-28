@@ -1,6 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect } from "react"
+
+import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -11,16 +13,25 @@ import { Search, Filter, ExternalLink, Clock, CheckCircle, XCircle, Calendar, Re
 import { toast } from "sonner"
 import { web3Service, PaymentStatus, type Payment } from "@/lib/web3"
 import { PaymentHistorySkeleton } from "./loading-skeleton"
+import { useAccount } from "wagmi"
+import { usePayerPayments } from "@/lib/web3-wagmi"
 
 interface PaymentHistoryProps {
   userAddress: string
 }
 
 export function PaymentHistory({ userAddress }: PaymentHistoryProps) {
+  const { address } = useAccount()
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [payments, setPayments] = useState<Payment[]>([])
   const [isLoading, setIsLoading] = useState(true)
+
+  // Get payment IDs for the user
+  const { data: paymentIds, isLoading: isLoadingPayments, refetch } = usePayerPayments(address)
+
+  // You'll need to fetch individual payments based on the IDs
+  // This would require multiple usePayment hooks or a custom hook
 
   useEffect(() => {
     if (userAddress) {
@@ -121,7 +132,7 @@ export function PaymentHistory({ userAddress }: PaymentHistoryProps) {
     return `${address.slice(0, 6)}...${address.slice(-4)}`
   }
 
-  if (isLoading) {
+  if (isLoading || isLoadingPayments) {
     return <PaymentHistorySkeleton />
   }
 

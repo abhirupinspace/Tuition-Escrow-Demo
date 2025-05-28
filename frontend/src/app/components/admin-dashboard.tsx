@@ -28,6 +28,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { web3Service, PaymentStatus, type Payment, CONTRACT_ADDRESSES } from "@/lib/web3"
+import { useReleasePayment, useRefundPayment } from "@/lib/web3-wagmi"
 import { AdminDashboardSkeleton } from "./loading-skeleton"
 
 export function AdminDashboard() {
@@ -36,6 +37,9 @@ export function AdminDashboard() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [allPayments, setAllPayments] = useState<Payment[]>([])
   const [isLoading, setIsLoading] = useState(true)
+
+  const { release, isPending: isReleasing, isConfirmed: isReleased } = useReleasePayment()
+  const { refund, isPending: isRefunding, isConfirmed: isRefunded } = useRefundPayment()
 
   useEffect(() => {
     fetchAllPayments()
@@ -64,64 +68,22 @@ export function AdminDashboard() {
       : "0"
 
   const handleRelease = async (paymentId: bigint) => {
-    setIsProcessing(true)
     try {
-      const loadingToast = toast.loading("Releasing Payment", {
-        description: "Processing transaction...",
-      })
-
-      const txHash = await web3Service.releasePayment(Number(paymentId))
-
-      toast.dismiss(loadingToast)
-      toast.success("Payment Released", {
-        description: `Payment #${paymentId} has been successfully released`,
-        action: {
-          label: "View Transaction",
-          onClick: () => window.open(`https://sepolia.etherscan.io/tx/${txHash}`, "_blank"),
-        },
-      })
-
-      setSelectedPayment(null)
-      setActionReason("")
-      await fetchAllPayments() // Refresh data
+      release(Number(paymentId))
     } catch (error: any) {
-      console.error("Release error:", error)
       toast.error("Release Failed", {
-        description: error.message || "Failed to release payment. Please try again.",
+        description: error.message || "Failed to release payment.",
       })
-    } finally {
-      setIsProcessing(false)
     }
   }
 
   const handleRefund = async (paymentId: bigint) => {
-    setIsProcessing(true)
     try {
-      const loadingToast = toast.loading("Refunding Payment", {
-        description: "Processing transaction...",
-      })
-
-      const txHash = await web3Service.refundPayment(Number(paymentId))
-
-      toast.dismiss(loadingToast)
-      toast.success("Payment Refunded", {
-        description: `Payment #${paymentId} has been refunded`,
-        action: {
-          label: "View Transaction",
-          onClick: () => window.open(`https://sepolia.etherscan.io/tx/${txHash}`, "_blank"),
-        },
-      })
-
-      setSelectedPayment(null)
-      setActionReason("")
-      await fetchAllPayments() // Refresh data
+      refund(Number(paymentId))
     } catch (error: any) {
-      console.error("Refund error:", error)
       toast.error("Refund Failed", {
-        description: error.message || "Failed to refund payment. Please try again.",
+        description: error.message || "Failed to refund payment.",
       })
-    } finally {
-      setIsProcessing(false)
     }
   }
 
@@ -334,7 +296,7 @@ export function AdminDashboard() {
                               <Button
                                 variant="outline"
                                 onClick={() => selectedPayment && handleRefund(selectedPayment.id)}
-                                disabled={isProcessing}
+                                disabled={isRefunding}
                                 className="border-neutral-800 text-neutral-300 hover:bg-neutral-900/50"
                                 data-slot="button"
                               >
@@ -343,12 +305,12 @@ export function AdminDashboard() {
                               </Button>
                               <Button
                                 onClick={() => selectedPayment && handleRelease(selectedPayment.id)}
-                                disabled={isProcessing}
+                                disabled={isReleasing}
                                 className="bg-white text-black hover:bg-neutral-100"
                                 data-slot="button"
                               >
                                 <CheckCircle className="w-4 h-4 mr-2" />
-                                {isProcessing ? "Processing..." : "Release"}
+                                {isReleasing ? "Processing..." : "Release"}
                               </Button>
                             </DialogFooter>
                           </DialogContent>

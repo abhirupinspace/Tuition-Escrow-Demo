@@ -2,19 +2,30 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
+import { useAccount, useChainId } from "wagmi"
+import { toast } from "sonner"
+import {
+  useUSDCBalance,
+  useUSDCAllowance,
+  useApproveUSDC,
+  useInitializePayment,
+  useDepositPayment,
+  formatUSDCAmount,
+  parseUSDCAmount,
+} from "@/lib/web3-wagmi"
+import { web3Service } from "@/lib/web3" // Import web3Service from the correct file
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Button } from "@/components/ui/button"
 import { GraduationCap, DollarSign, FileText, Send, Shield, AlertCircle, CheckCircle } from "lucide-react"
-import { toast } from "sonner"
-import { web3Service } from "@/lib/web3"
 import { PaymentFormSkeleton } from "./loading-skeleton"
+import { CONTRACT_ADDRESSES } from "@/lib/config"
+import { sepolia } from "viem/chains"
 
 interface PaymentFormProps {
   userAddress: string
@@ -25,7 +36,7 @@ const universities = [
     id: "mit",
     name: "Massachusetts Institute of Technology",
     country: "United States",
-    address: "0x1234567890123456789012345678901234567890",
+    address: CONTRACT_ADDRESSES.USDC,
     ranking: "#1",
     students: "11,000+",
   },
@@ -33,7 +44,7 @@ const universities = [
     id: "oxford",
     name: "University of Oxford",
     country: "United Kingdom",
-    address: "0x2345678901234567890123456789012345678901",
+    address: CONTRACT_ADDRESSES.USDC,
     ranking: "#2",
     students: "24,000+",
   },
@@ -41,7 +52,7 @@ const universities = [
     id: "stanford",
     name: "Stanford University",
     country: "United States",
-    address: "0x3456789012345678901234567890123456789012",
+    address: CONTRACT_ADDRESSES.USDC,
     ranking: "#3",
     students: "17,000+",
   },
@@ -49,7 +60,7 @@ const universities = [
     id: "cambridge",
     name: "University of Cambridge",
     country: "United Kingdom",
-    address: "0x4567890123456789012345678901234567890123",
+    address: CONTRACT_ADDRESSES.USDC,
     ranking: "#4",
     students: "23,000+",
   },
@@ -57,21 +68,32 @@ const universities = [
     id: "eth",
     name: "ETH Zurich",
     country: "Switzerland",
-    address: "0x5678901234567890123456789012345678901234",
+    address: CONTRACT_ADDRESSES.USDC,
     ranking: "#7",
     students: "22,000+",
   },
 ]
 
 export function PaymentForm({ userAddress }: PaymentFormProps) {
-  const [isComponentLoading, setIsComponentLoading] = useState(true)
+  const { address, isConnected } = useAccount() // Add isConnected
+  const chainId = useChainId()
   const [selectedUniversity, setSelectedUniversity] = useState("")
   const [amount, setAmount] = useState("")
   const [invoiceRef, setInvoiceRef] = useState("")
   const [description, setDescription] = useState("")
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [usdcBalance, setUsdcBalance] = useState<string>("0")
-  const [isApproving, setIsApproving] = useState(false)
+  const [currentPaymentId, setCurrentPaymentId] = useState<number | null>(null)
+  const [usdcBalance, setUsdcBalance] = useState<string>("0") // Declare setUsdcBalance here
+
+  // Wagmi hooks
+  const { data: usdcBalanceData } = useUSDCBalance(address)
+  const { data: allowance } = useUSDCAllowance(address, CONTRACT_ADDRESSES.TUITION_ESCROW as any)
+  const { approve, isPending: isApproving, isConfirmed: isApproved } = useApproveUSDC()
+  const { initialize, isPending: isInitializing, isConfirmed: isInitialized, hash: initHash } = useInitializePayment()
+  const { deposit, isPending: isDepositing, isConfirmed: isDeposited, hash: depositHash } = useDepositPayment()
+
+  const usdcBalanceFormatted = usdcBalanceData ? formatUSDCAmount(usdcBalanceData) : "0"
+  const isProcessing = isApproving || isInitializing || isDepositing
+  const [isComponentLoading, setIsComponentLoading] = useState(true)
   const [ethBalance, setEthBalance] = useState<string>("0")
   const [gasEstimate, setGasEstimate] = useState<{
     gasLimit: bigint
@@ -79,6 +101,7 @@ export function PaymentForm({ userAddress }: PaymentFormProps) {
     estimatedCost: string
   } | null>(null)
   const [isEstimatingGas, setIsEstimatingGas] = useState(false)
+  const [network, setNetwork] = useState<string>("")
 
   useEffect(() => {
     // Simulate component loading
@@ -90,10 +113,41 @@ export function PaymentForm({ userAddress }: PaymentFormProps) {
   }, [])
 
   useEffect(() => {
-    fetchBalances()
-  }, [userAddress])
+    if (!isConnected) {
+      setNetwork("disconnected")
+      return
+    }
+    checkNetwork()
+  }, [isConnected, chainId])
+
+  const checkNetwork = async () => {
+    try {
+      if (!isConnected) {
+        setNetwork("disconnected")
+        return
+      }
+
+      if (chainId !== sepolia.id) {
+        setNetwork("wrong")
+        toast.error("Incorrect Network", {
+          description: "Please switch to the Sepolia testnet",
+        })
+      } else {
+        setNetwork("sepolia")
+      }
+    } catch (error) {
+      console.error("Error checking network:", error)
+      setNetwork("unknown")
+    }
+  }
 
   const fetchBalances = async () => {
+    if (!isConnected || !userAddress) {
+      setUsdcBalance("0")
+      setEthBalance("0")
+      return
+    }
+
     try {
       const [usdcBal, ethBal] = await Promise.all([
         web3Service.getUSDCBalance(userAddress),
@@ -103,6 +157,8 @@ export function PaymentForm({ userAddress }: PaymentFormProps) {
       setEthBalance(ethBal)
     } catch (error) {
       console.error("Error fetching balances:", error)
+      setUsdcBalance("0")
+      setEthBalance("0")
     }
   }
 
@@ -129,7 +185,7 @@ export function PaymentForm({ userAddress }: PaymentFormProps) {
     }
 
     const amountNum = Number.parseFloat(amount)
-    const balanceNum = Number.parseFloat(usdcBalance)
+    const balanceNum = Number.parseFloat(usdcBalanceFormatted)
 
     if (amountNum > balanceNum) {
       toast.error("Insufficient Balance", {
@@ -144,33 +200,81 @@ export function PaymentForm({ userAddress }: PaymentFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!validateForm()) return
+    if (!isConnected) {
+      toast.error("Wallet Not Connected", {
+        description: "Please connect your wallet to continue",
+      })
+      return
+    }
 
-    setIsProcessing(true)
+    if (!validateForm()) return
 
     try {
       const selectedUni = universities.find((u) => u.id === selectedUniversity)
-      if (!selectedUni) {
-        throw new Error("University not found")
+      if (!selectedUni || !address) {
+        throw new Error("University or address not found")
       }
 
-      // Show loading toast
-      const loadingToast = toast.loading("Creating Payment", {
-        description: "Preparing transaction...",
+      const amountWei = parseUSDCAmount(amount)
+      const currentAllowance = allowance || 0n
+
+      // Step 1: Approve USDC if needed
+      if (currentAllowance < amountWei) {
+        toast.loading("Approving USDC...", { id: "approval" })
+        approve(amount)
+        return // Wait for approval to complete
+      }
+
+      // Step 2: Initialize payment
+      if (!currentPaymentId) {
+        toast.loading("Initializing payment...", { id: "init" })
+        initialize(address, selectedUni.address as any, amount, invoiceRef)
+        return // Wait for initialization
+      }
+
+      // Step 3: Deposit funds
+      toast.loading("Depositing funds...", { id: "deposit" })
+      deposit(currentPaymentId)
+    } catch (error: any) {
+      console.error("Payment error:", error)
+      toast.error("Payment Failed", {
+        description: error.message || "There was an error processing your payment.",
       })
+    }
+  }
 
-      // Create payment through smart contract
-      const txHash = await web3Service.createPayment(selectedUni.address, amount, invoiceRef)
+  // Handle approval confirmation
+  useEffect(() => {
+    if (isApproved) {
+      toast.dismiss("approval")
+      toast.success("USDC Approved", {
+        description: "You can now proceed with the payment",
+      })
+    }
+  }, [isApproved])
 
-      // Dismiss loading toast
-      toast.dismiss(loadingToast)
+  // Handle initialization confirmation
+  useEffect(() => {
+    if (isInitialized && initHash) {
+      toast.dismiss("init")
+      toast.success("Payment Initialized", {
+        description: "Payment has been initialized. Now depositing funds...",
+      })
+      // Extract payment ID from transaction logs here if needed
+      // For now, we'll use a mock ID
+      setCurrentPaymentId(1) // This should be extracted from the transaction receipt
+    }
+  }, [isInitialized, initHash])
 
-      // Show success toast
+  // Handle deposit confirmation
+  useEffect(() => {
+    if (isDeposited && depositHash) {
+      toast.dismiss("deposit")
       toast.success("Payment Created Successfully", {
-        description: `Payment of ${amount} USDC to ${selectedUni.name} has been secured in escrow`,
+        description: `Payment of ${amount} USDC has been secured in escrow`,
         action: {
           label: "View Transaction",
-          onClick: () => window.open(`https://sepolia.etherscan.io/tx/${txHash}`, "_blank"),
+          onClick: () => window.open(`https://sepolia.etherscan.io/tx/${depositHash}`, "_blank"),
         },
       })
 
@@ -179,31 +283,9 @@ export function PaymentForm({ userAddress }: PaymentFormProps) {
       setAmount("")
       setInvoiceRef("")
       setDescription("")
-
-      // Refresh balance
-      await fetchBalances()
-    } catch (error: any) {
-      console.error("Payment creation error:", error)
-
-      let errorMessage = "There was an error processing your payment. Please try again."
-
-      if (error.message.includes("insufficient funds")) {
-        errorMessage = "Insufficient funds for transaction fees"
-      } else if (error.message.includes("user rejected")) {
-        errorMessage = "Transaction was cancelled by user"
-      } else if (error.message.includes("Insufficient USDC balance")) {
-        errorMessage = "Insufficient USDC balance"
-      } else if (error.message) {
-        errorMessage = error.message
-      }
-
-      toast.error("Payment Failed", {
-        description: errorMessage,
-      })
-    } finally {
-      setIsProcessing(false)
+      setCurrentPaymentId(null)
     }
-  }
+  }, [isDeposited, depositHash, amount])
 
   useEffect(() => {
     if (selectedUniversity && amount && Number.parseFloat(amount) > 0) {
@@ -214,7 +296,10 @@ export function PaymentForm({ userAddress }: PaymentFormProps) {
   }, [selectedUniversity, amount])
 
   const estimateGas = async () => {
-    if (!selectedUniversity || !amount) return
+    if (!selectedUniversity || !amount || !isConnected) {
+      setGasEstimate(null)
+      return
+    }
 
     setIsEstimatingGas(true)
     try {
@@ -328,7 +413,9 @@ export function PaymentForm({ userAddress }: PaymentFormProps) {
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <div className="space-y-1">
-                    <div className="text-neutral-400">Available: {Number.parseFloat(usdcBalance).toFixed(2)} USDC</div>
+                    <div className="text-neutral-400">
+                      Available: {Number.parseFloat(usdcBalanceFormatted).toFixed(2)} USDC
+                    </div>
                     <div className="text-neutral-400">ETH Balance: {Number.parseFloat(ethBalance).toFixed(4)} ETH</div>
                   </div>
                   {hasInsufficientBalance && (
@@ -377,10 +464,15 @@ export function PaymentForm({ userAddress }: PaymentFormProps) {
               <Button
                 type="submit"
                 className="w-full h-12 font-medium bg-white text-black hover:bg-neutral-100 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={isProcessing || hasInsufficientBalance}
+                disabled={isProcessing || hasInsufficientBalance || network !== "sepolia" || !isConnected}
                 data-slot="button"
               >
-                {isProcessing ? (
+                {!isConnected ? (
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4" />
+                    Connect Wallet
+                  </div>
+                ) : isProcessing ? (
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 border-2 border-neutral-400 border-t-black rounded-full animate-spin"></div>
                     Processing Payment...
@@ -454,6 +546,25 @@ export function PaymentForm({ userAddress }: PaymentFormProps) {
                   </div>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Network Status */}
+        {network !== "sepolia" && (
+          <Card className="bg-red-950/20 border border-red-800/30 backdrop-blur-sm" data-slot="card">
+            <CardContent className="pt-6" data-slot="content">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 bg-neutral-900 border border-neutral-800 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <AlertCircle className="w-4 h-4 text-red-400" />
+                </div>
+                <div className="space-y-2">
+                  <h4 className="font-medium text-red-400">Network Error</h4>
+                  <p className="text-sm text-neutral-400 leading-relaxed font-light">
+                    Please switch to the Sepolia testnet to proceed with the payment.
+                  </p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         )}

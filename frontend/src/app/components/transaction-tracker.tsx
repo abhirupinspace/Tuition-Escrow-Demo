@@ -32,8 +32,14 @@ export function TransactionTracker({ userAddress }: TransactionTrackerProps) {
     }
 
     // Set up event listeners for new transactions
-    const handlePaymentCreated = (event: any) => {
-      const [paymentId, payer, university, amount, invoiceRef] = event.args;
+    const handlePaymentCreated = (
+      paymentId: any,
+      payer: string,
+      university: string,
+      amount: any,
+      invoiceRef: string,
+      event: any,
+    ) => {
       if (payer.toLowerCase() === userAddress.toLowerCase()) {
         addTransaction({
           hash: event.transactionHash,
@@ -50,8 +56,7 @@ export function TransactionTracker({ userAddress }: TransactionTrackerProps) {
       }
     }
 
-    const handlePaymentReleased = (event: any) => {
-      const [paymentId, university, amount] = event.args;
+    const handlePaymentReleased = (paymentId: any, university: string, amount: any, event: any) => {
       addTransaction({
         hash: event.transactionHash,
         type: "release",
@@ -62,8 +67,7 @@ export function TransactionTracker({ userAddress }: TransactionTrackerProps) {
       })
     }
 
-    const handlePaymentRefunded = (event: any) => {
-      const [paymentId, payer, amount] = event.args;
+    const handlePaymentRefunded = (paymentId: any, payer: string, amount: any, event: any) => {
       if (payer.toLowerCase() === userAddress.toLowerCase()) {
         addTransaction({
           hash: event.transactionHash,

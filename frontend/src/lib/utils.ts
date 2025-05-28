@@ -1,5 +1,6 @@
-export const CONTRACT_ADDRESSES = {
-  TUITION_ESCROW: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || "0xC2d4d5b924406e57bbCB6DCBcEc9F4a6a4B3d676",
-  USDC: process.env.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS || "0x466e34e422e7775e7EbB606c9F4cE870e9A2817e", // Sepolia USDC
-  ADMIN: process.env.NEXT_PUBLIC_ADMIN_ADDRESS || "0x45395f9Ea68ED3b271AbDC5DA72bC3FB3e8B0e71",
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
 }
