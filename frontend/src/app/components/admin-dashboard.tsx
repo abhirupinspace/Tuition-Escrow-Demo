@@ -31,7 +31,6 @@ import { web3Service, PaymentStatus, type Payment, CONTRACT_ADDRESSES } from "@/
 import { useReleasePayment, useRefundPayment } from "@/lib/web3-wagmi"
 import { AdminDashboardSkeleton } from "./loading-skeleton"
 
-// Add mock payments for empty states
 const MOCK_PAYMENTS: Payment[] = [
   {
     id: 1,
@@ -41,8 +40,8 @@ const MOCK_PAYMENTS: Payment[] = [
     invoiceRef: "TUITION-2024-001",
     invoiceReference: "TUITION-2024-001",
     status: PaymentStatus.PENDING,
-    createdAt: BigInt(Math.floor(Date.now() / 1000) - 86400 * 3), // 3 days ago
-    depositedAt: BigInt(Math.floor(Date.now() / 1000) - 86400 * 2), // 2 days ago
+    createdAt: BigInt(Date.now() / 1000 - 86400 * 3), // 3 days ago
+    depositedAt: BigInt(Date.now() / 1000 - 86400 * 2), // 2 days ago
   },
   {
     id: 2,
@@ -52,8 +51,8 @@ const MOCK_PAYMENTS: Payment[] = [
     invoiceRef: "TUITION-2024-002",
     invoiceReference: "TUITION-2024-002",
     status: PaymentStatus.PENDING,
-    createdAt: BigInt(Math.floor(Date.now() / 1000) - 86400), // 1 day ago
-    depositedAt: BigInt(Math.floor(Date.now() / 1000) - 43200), // 12 hours ago
+    createdAt: BigInt(Date.now() / 1000 - 86400), // 1 day ago
+    depositedAt: BigInt(Date.now() / 1000 - 43200), // 12 hours ago
   }
 ]
 
@@ -159,7 +158,6 @@ export function AdminDashboard() {
     return `${address.slice(0, 6)}...${address.slice(-4)}`
   }
 
-  // Update formatDate helper to handle integer timestamps
   const formatDate = (timestamp: bigint): string => {
     return new Date(Number(timestamp) * 1000).toLocaleDateString()
   }

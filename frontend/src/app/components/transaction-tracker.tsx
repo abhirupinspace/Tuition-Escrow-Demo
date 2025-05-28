@@ -32,14 +32,9 @@ export function TransactionTracker({ userAddress }: TransactionTrackerProps) {
     }
 
     // Set up event listeners for new transactions
-    const handlePaymentCreated = (
-      paymentId: any,
-      payer: string,
-      university: string,
-      amount: any,
-      invoiceRef: string,
-      event: any,
-    ) => {
+    const handlePaymentCreated = (event: any) => {
+      const { paymentId, payer, university, amount, invoiceRef } = event.args
+      
       if (payer.toLowerCase() === userAddress.toLowerCase()) {
         addTransaction({
           hash: event.transactionHash,
@@ -47,23 +42,21 @@ export function TransactionTracker({ userAddress }: TransactionTrackerProps) {
           status: "confirmed",
           timestamp: Date.now(),
           amount: web3Service.formatAmount(amount),
-          paymentId: paymentId.toString(),
-        })
-
-        toast.success("Payment Confirmed", {
-          description: `Payment #${paymentId} has been confirmed on the blockchain`,
+          paymentId: paymentId.toString()
         })
       }
     }
 
-    const handlePaymentReleased = (paymentId: any, university: string, amount: any, event: any) => {
+    const handlePaymentReleased = (event: any) => {
+      const { paymentId, university, amount } = event.args
+      
       addTransaction({
         hash: event.transactionHash,
         type: "release",
-        status: "confirmed",
+        status: "confirmed", 
         timestamp: Date.now(),
         amount: web3Service.formatAmount(amount),
-        paymentId: paymentId.toString(),
+        paymentId: paymentId.toString()
       })
     }
 

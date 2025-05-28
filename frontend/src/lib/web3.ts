@@ -749,10 +749,10 @@ export const SEPOLIA_NETWORK = {
 // Payment status enum (updated to match contract)
 export enum PaymentStatus {
   INITIALIZED = 0,
-  DEPOSITED = 1,
+  DEPOSITED = 1,  
   RELEASED = 2,
   REFUNDED = 3,
-  PENDING,
+  PENDING
 }
 
 // Types (updated to match new contract structure)
@@ -762,7 +762,7 @@ export interface Payment {
   university: string
   amount: bigint
   invoiceRef: string
-  invoiceReference: string // For UI display
+  invoiceReference: string
   status: PaymentStatus
   createdAt: bigint
   depositedAt: bigint
@@ -984,7 +984,7 @@ export class Web3Service {
     }
   }
 
-  async getPaymentsByPayer(payerAddress: string): Promise<Array<Payment & { id: number }>> {
+  async getPaymentsByPayer(payerAddress: string): Promise<Payment[]> {
     try {
       const contract = this.getTuitionEscrowContract()
       const paymentIds = await contract.getPayerPayments(payerAddress)
@@ -998,12 +998,12 @@ export class Web3Service {
             university: payment.university,
             amount: payment.amount,
             invoiceRef: payment.invoiceRef,
-            invoiceReference: payment.invoiceRef, // Map invoiceRef to invoiceReference
+            invoiceReference: payment.invoiceRef, // Map to display field
             status: payment.status,
             createdAt: payment.createdAt,
             depositedAt: payment.depositedAt,
           }
-        }),
+        })
       )
 
       return payments
