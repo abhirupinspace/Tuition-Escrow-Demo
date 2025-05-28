@@ -1,6 +1,26 @@
 {
-  "name": "hardhat-project",
+  
+    "name": "tuition-escrow-dapp",
+    "version": "1.0.0",
+    "description": "Cross-border payment system using existing stablecoins for tuition fees",
+    "main": "index.js",
+    "scripts": {
+      "test:escrow": "hardhat test test/TuitionEscrow.test.ts",
+      "test:integration": "hardhat test test/Integration.test.ts",
+      "test:coverage": "hardhat coverage",
+      "deploy:simple": "hardhat run scripts/deploy.ts --network sepolia",
+      "deploy:localhost": "hardhat run scripts/deploy.ts --network localhost",
+      "deploy:sepolia": "hardhat run scripts/deploy.ts --network sepolia",
+      "deploy:mainnet": "hardhat run scripts/deploy.ts --network mainnet",
+      "ignition:localhost": "hardhat ignition deploy ignition/modules/TuitionEscrowSimple.ts --network localhost",
+      "ignition:sepolia": "hardhat ignition deploy ignition/modules/TuitionEscrowSimple.ts --network sepolia",
+      "ignition:mainnet": "hardhat ignition deploy ignition/modules/TuitionEscrowSimple.ts --network mainnet",
+      "verify:deployment": "hardhat run scripts/verify-deployment.ts",
+      "node": "hardhat node",
+      "clean": "hardhat clean"
+    },
   "devDependencies": {
+    "@nomicfoundation/hardhat-chai-matchers": "^2.0.8",
     "@nomicfoundation/hardhat-ethers": "^3.0.8",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "ethers": "^6.14.3",
