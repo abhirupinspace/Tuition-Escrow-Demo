@@ -60,7 +60,8 @@ export function TransactionTracker({ userAddress }: TransactionTrackerProps) {
       })
     }
 
-    const handlePaymentRefunded = (paymentId: any, payer: string, amount: any, event: any) => {
+    const handlePaymentRefunded = (event: any) => {
+      const { paymentId, payer, amount } = event.args;
       if (payer.toLowerCase() === userAddress.toLowerCase()) {
         addTransaction({
           hash: event.transactionHash,

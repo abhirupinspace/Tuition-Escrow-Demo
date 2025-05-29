@@ -27,9 +27,10 @@ import {
   RefreshCw,
 } from "lucide-react"
 import { toast } from "sonner"
-import { web3Service, PaymentStatus, type Payment, CONTRACT_ADDRESSES } from "@/lib/web3"
-import { useReleasePayment, useRefundPayment } from "@/lib/web3-wagmi"
+
 import { AdminDashboardSkeleton } from "./loading-skeleton"
+import { CONTRACT_ADDRESSES, Payment, PaymentStatus, web3Service } from "../../lib/web3"
+import { useReleasePayment, useRefundPayment } from "../../lib/web3-wagmi"
 
 const MOCK_PAYMENTS: Payment[] = [
   {
@@ -40,8 +41,8 @@ const MOCK_PAYMENTS: Payment[] = [
     invoiceRef: "TUITION-2024-001",
     invoiceReference: "TUITION-2024-001",
     status: PaymentStatus.PENDING,
-    createdAt: BigInt(Date.now() / 1000 - 86400 * 3), // 3 days ago
-    depositedAt: BigInt(Date.now() / 1000 - 86400 * 2), // 2 days ago
+    createdAt: BigInt(Math.floor(Date.now() / 1000) - 86400 * 3), // 3 days ago
+    depositedAt: BigInt(Math.floor(Date.now() / 1000) - 86400 * 2), // 2 days ago
   },
   {
     id: 2,
@@ -51,8 +52,8 @@ const MOCK_PAYMENTS: Payment[] = [
     invoiceRef: "TUITION-2024-002",
     invoiceReference: "TUITION-2024-002",
     status: PaymentStatus.PENDING,
-    createdAt: BigInt(Date.now() / 1000 - 86400), // 1 day ago
-    depositedAt: BigInt(Date.now() / 1000 - 43200), // 12 hours ago
+    createdAt: BigInt(Math.floor(Date.now() / 1000) - 86400), // 1 day ago
+    depositedAt: BigInt(Math.floor(Date.now() / 1000) - 43200), // 12 hours ago
   }
 ]
 
@@ -113,11 +114,11 @@ export function AdminDashboard() {
   const handleRelease = async (paymentId: bigint) => {
     try {
       toast.loading("Processing release...", { id: "release" })
-      await release(Number(paymentId))
+      await release(paymentId) // Remove Number conversion
       
-      // Optimistically update UI
+      // Update UI comparison to use bigint
       setAllPayments(prev => prev.map(p => 
-        p.id === Number(paymentId) 
+        BigInt(p.id) === paymentId
           ? { ...p, status: PaymentStatus.RELEASED }
           : p
       ))
@@ -135,11 +136,11 @@ export function AdminDashboard() {
   const handleRefund = async (paymentId: bigint) => {
     try {
       toast.loading("Processing refund...", { id: "refund" })
-      await refund(Number(paymentId))
+      await refund(paymentId) // Remove Number conversion
 
-      // Optimistically update UI
+      // Update UI comparison to use bigint
       setAllPayments(prev => prev.map(p => 
-        p.id === Number(paymentId)
+        BigInt(p.id) === paymentId
           ? { ...p, status: PaymentStatus.REFUNDED }
           : p
       ))
@@ -362,7 +363,7 @@ export function AdminDashboard() {
                             <DialogFooter className="flex gap-3" data-slot="footer">
                               <Button
                                 variant="outline"
-                                onClick={() => selectedPayment && handleRefund(selectedPayment.id)}
+                                onClick={() => selectedPayment && handleRefund(BigInt(selectedPayment.id))}
                                 disabled={isRefunding}
                                 className="border-neutral-800 text-neutral-300 hover:bg-neutral-900/50"
                                 data-slot="button"
@@ -371,7 +372,7 @@ export function AdminDashboard() {
                                 Refund
                               </Button>
                               <Button
-                                onClick={() => selectedPayment && handleRelease(selectedPayment.id)}
+                                onClick={() => selectedPayment && handleRelease(BigInt(selectedPayment.id))}
                                 disabled={isReleasing}
                                 className="bg-white text-black hover:bg-neutral-100"
                                 data-slot="button"

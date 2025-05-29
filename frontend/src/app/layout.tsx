@@ -1,11 +1,14 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
+import { Inter } from 'next/font/google'
 import "./globals.css"
 import { Toaster } from "sonner"
 import { Providers } from "@/lib/providers"
 
-const inter = Inter({ subsets: ["latin"] })
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   title: "EduPay Global - Cross-Border Education Payments",
